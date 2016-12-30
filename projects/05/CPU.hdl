@@ -6,23 +6,23 @@
 /**
  * The Hack CPU (Central Processing unit), consisting of an ALU,
  * two registers named A and D, and a program counter named PC.
- * The CPU is designed to fetch and execute instructions written in 
+ * The CPU is designed to fetch and execute instructions written in
  * the Hack machine language. In particular, functions as follows:
- * Executes the inputted instruction according to the Hack machine 
+ * Executes the inputted instruction according to the Hack machine
  * language specification. The D and A in the language specification
  * refer to CPU-resident registers, while M refers to the external
- * memory location addressed by A, i.e. to Memory[A]. The inM input 
- * holds the value of this location. If the current instruction needs 
- * to write a value to M, the value is placed in outM, the address 
- * of the target location is placed in the addressM output, and the 
- * writeM control bit is asserted. (When writeM==0, any value may 
- * appear in outM). The outM and writeM outputs are combinational: 
- * they are affected instantaneously by the execution of the current 
- * instruction. The addressM and pc outputs are clocked: although they 
- * are affected by the execution of the current instruction, they commit 
- * to their new values only in the next time step. If reset==1 then the 
- * CPU jumps to address 0 (i.e. pc is set to 0 in next time step) rather 
- * than to the address resulting from executing the current instruction. 
+ * memory location addressed by A, i.e. to Memory[A]. The inM input
+ * holds the value of this location. If the current instruction needs
+ * to write a value to M, the value is placed in outM, the address
+ * of the target location is placed in the addressM output, and the
+ * writeM control bit is asserted. (When writeM==0, any value may
+ * appear in outM). The outM and writeM outputs are combinational:
+ * they are affected instantaneously by the execution of the current
+ * instruction. The addressM and pc outputs are clocked: although they
+ * are affected by the execution of the current instruction, they commit
+ * to their new values only in the next time step. If reset==1 then the
+ * CPU jumps to address 0 (i.e. pc is set to 0 in next time step) rather
+ * than to the address resulting from executing the current instruction.
  */
 
 CHIP CPU {
@@ -34,10 +34,57 @@ CHIP CPU {
                          // the current program (reset==0).
 
     OUT outM[16],        // M value output
-        writeM,          // Write to M? 
+        writeM,          // Write to M?
         addressM[15],    // Address in data memory (of M)
         pc[15];          // address of next instruction
 
     PARTS:
-    // Put your code here:
+      // Instruction Type
+      Not(in=instruction[15], out=isatype);
+      And(a=instruction[15], b=instruction[15], out=isctype);
+
+      // A Register Control
+      And(a=instruction[5], b=isctype, out=amuxselect);
+      Or(a=isatype, b=amuxselect, out=aregwrite);
+
+      // D Register Control
+      And(a=instruction[4], b=isctype, out=dregwrite);
+
+      // Jump Control
+      Or(a=zr, b=ng, out=temp);
+      Not(in=temp, out=nl);
+
+      And(a=nl, b=instruction[0], out=jgt);
+      And(a=zr, b=instruction[1], out=jeq);
+      And(a=ng, b=instruction[2], out=jlt);
+
+      Or8Way(in[0]=false, in[1]=jgt, in[2]=jeq, in[3]=false,
+             in[4]=jlt, in[5]=false, in[6]=false, in[7]=false, out=validjump);
+      And(a=validjump, b=isctype, out=pcload);
+      Not(in=pcload, out=pcinc);
+
+      // A Register
+      Mux16(a=instruction, b=aluout, sel=amuxselect, out=areginput);
+
+      ARegister(in=areginput, load=aregwrite, out=aregout);
+
+      // D Register
+      DRegister(in=aluout, load=dregwrite, out=xinput);
+
+      // ALU
+      Mux16(a=aregout, b=inM, sel=instruction[12], out=yinput);
+
+      ALU(x=xinput, y=yinput,
+          zx=instruction[11], nx=instruction[10],
+          zy=instruction[9], ny=instruction[8],
+          f=instruction[7], no=instruction[6],
+          out=aluout, zr=zr, ng=ng);
+
+      // Memory Outputs
+      And16(a=aregout, b=aregout, out[0..14]=addressM);
+      And16(a=aluout, b=aluout, out=outM);
+      And(a=instruction[3], b=isctype, out=writeM);
+
+      // PC
+      PC(in=aregout, inc=pcinc, load=pcload, reset=reset, out[0..14]=pc);
 }
