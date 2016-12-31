@@ -221,12 +221,11 @@ def build_output_filename(inputFilename)
 end
 
 def output_bytecode(outputFilename, bytecode)
-  fileObj = File.open(outputFilename, 'wb')
+  fileObj = File.open(outputFilename, 'w')
 
   bytecode.each {|line|
-    lineArray=[]
-    lineArray.push line
-    fileObj.write lineArray.pack("S")
+    formattedLine = sprintf("%016b\n", line)
+    fileObj.write formattedLine
   }
 end
 
@@ -243,3 +242,6 @@ bytecode = parse(inputArray, symbolTable)
 outputFilename = build_output_filename(inputFilename)
 
 output_bytecode(outputFilename, bytecode)
+
+puts inputArray
+puts bytecode
