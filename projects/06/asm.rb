@@ -63,13 +63,28 @@ def aInstruction(line, symbolTable)
   end
 end
 
+def split_dest_comp(line)
+  if line.include? "="
+    return line.split('=')
+  else
+    dest_comp=[]
+    dest_comp[0]= ""
+    dest_comp[1]= line.split(';')[0]
+    return dest_comp
+  end
+end
+
 def parseDest(line)
-  dest = line.split('=')[0]
+  dest = split_dest_comp(line)[0]
 
   if dest == nil
     dest = ""
   else
     dest = dest.strip
+  end
+
+  if line.start_with? "D=D+M"
+    puts "D:" + dest + "\n"
   end
 
   case dest
@@ -93,12 +108,16 @@ def parseDest(line)
 end
 
 def parseComp(line)
-  comp = line.split('=')[1]
+  comp = split_dest_comp(line)[1]
 
   if comp == nil
     comp = ""
   else
     comp = comp.strip
+  end
+
+  if line.start_with? "D=D+M"
+    puts "C:" + comp + "\n"
   end
 
   case comp
@@ -148,7 +167,7 @@ def parseComp(line)
      return 0b1110111
   when "M-1"
      return 0b1110010
-  when "D+A"
+  when "D+M"
      return 0b1000010
   when "D-M"
      return 0b1010011
@@ -170,6 +189,10 @@ def parseJump(line)
     jump = ""
   else
     jump = jump.strip
+  end
+
+  if line.start_with? "D=D+M"
+    puts "J:" + jump + "\n"
   end
 
   case jump
@@ -217,7 +240,7 @@ end
 
 def build_output_filename(inputFilename)
   elements = inputFilename.split(".")
-  return elements[0] + ".hack"
+  return elements[0] + ".mine.hack"
 end
 
 def output_bytecode(outputFilename, bytecode)
@@ -242,6 +265,3 @@ bytecode = parse(inputArray, symbolTable)
 outputFilename = build_output_filename(inputFilename)
 
 output_bytecode(outputFilename, bytecode)
-
-puts inputArray
-puts bytecode
