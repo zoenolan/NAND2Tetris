@@ -16,7 +16,7 @@ def strip_whitespace(rawContentsArray)
   # Remove whitespace and comments
   contentArray=[]
   rawContentsArray.each {|line|
-    strippedLine = line.lstrip
+    strippedLine = line.split("//")[0].strip
 
     if (strippedLine.empty? != true) && (strippedLine.start_with?('//') != true)
       contentArray.push strippedLine
@@ -26,35 +26,63 @@ def strip_whitespace(rawContentsArray)
   return contentArray
 end
 
-def is_number(symbol)
-  true if Float(symbol) rescue false
-end
-
-def build_symboltable(inputArray)
+def build_predefined_symbols()
   symbolTable = Hash.new
-  counter = 16;
 
-  inputArray.each {|line|
-    step = 1
-
-    if line.start_with?("(")
-      # symbol
-      symbol = line.split(' ')[0]
-
-      if is_number(symbol)
-        symbolTable[symbol] = counter
-        step = 0
-      end
-    end
-
-    counter = counter + step
-  }
+  symbolTable["SP"] = 0
+  symbolTable["LCL"] = 1
+  symbolTable["ARG"] = 2
+  symbolTable["THIS"] = 3
+  symbolTable["THAT"] = 4
+  symbolTable["R0"] = 0
+  symbolTable["R1"] = 1
+  symbolTable["R2"] = 2
+  symbolTable["R3"] = 3
+  symbolTable["R4"] = 4
+  symbolTable["R5"] = 5
+  symbolTable["R6"] = 6
+  symbolTable["R7"] = 7
+  symbolTable["R8"] = 8
+  symbolTable["R9"] = 9
+  symbolTable["R10"] = 10
+  symbolTable["R11"] = 11
+  symbolTable["R12"] = 12
+  symbolTable["R13"] = 13
+  symbolTable["R14"] = 14
+  symbolTable["R15"] = 15
+  symbolTable["SCREEN"] = 0x4000
+  symbolTable["KBD"] = 0x6000
 
   return symbolTable
 end
 
+def build_symboltable(inputArray)
+  symbolTable = build_predefined_symbols()
+  counter = 0;
+
+  inputArray.each {|line|
+    puts line + " with " + counter.to_s
+
+    if line.start_with?("(")
+      # symbol
+      symbol = line[1..-1].split(')')[0]
+      symbolTable[symbol] = counter
+    else
+      counter = counter + 1
+    end
+  }
+
+  puts symbolTable
+
+  return symbolTable
+end
+
+def is_number(symbol)
+  return symbol.match(/\A[+-]?\d+?(\.\d+)?\Z/) == nil ? false : true
+end
+
 def aInstruction(line, symbolTable)
-  symbol = line[1..-1]
+  symbol = line[1..-1].strip
 
   if is_number(symbol)
       return symbol.to_i
@@ -81,10 +109,6 @@ def parseDest(line)
     dest = ""
   else
     dest = dest.strip
-  end
-
-  if line.start_with? "D=D+M"
-    puts "D:" + dest + "\n"
   end
 
   case dest
@@ -114,10 +138,6 @@ def parseComp(line)
     comp = ""
   else
     comp = comp.strip
-  end
-
-  if line.start_with? "D=D+M"
-    puts "C:" + comp + "\n"
   end
 
   case comp
@@ -189,10 +209,6 @@ def parseJump(line)
     jump = ""
   else
     jump = jump.strip
-  end
-
-  if line.start_with? "D=D+M"
-    puts "J:" + jump + "\n"
   end
 
   case jump
