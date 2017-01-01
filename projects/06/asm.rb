@@ -61,8 +61,6 @@ def build_symboltable(inputArray)
   counter = 0;
 
   inputArray.each {|line|
-    puts line + " with " + counter.to_s
-
     if line.start_with?("(")
       # symbol
       symbol = line[1..-1].split(')')[0]
@@ -72,8 +70,6 @@ def build_symboltable(inputArray)
     end
   }
 
-  puts symbolTable
-
   return symbolTable
 end
 
@@ -81,13 +77,21 @@ def is_number(symbol)
   return symbol.match(/\A[+-]?\d+?(\.\d+)?\Z/) == nil ? false : true
 end
 
-def aInstruction(line, symbolTable)
+def aInstruction(line, symbolTable, variableCounter)
   symbol = line[1..-1].strip
 
   if is_number(symbol)
-      return symbol.to_i
+      return symbol.to_i, variableCounter
   else
-      return symbolTable[symbol]
+    lookup = symbolTable[symbol]
+    if lookup == nil
+      symbolTable[symbol] = variableCounter
+      lookup = variableCounter
+
+      variableCounter = variableCounter + 1
+    end
+
+    return lookup, variableCounter
   end
 end
 
@@ -242,10 +246,13 @@ def cInstruction(line)
 end
 
 def parse(inputArray, symbolTable)
+  variableCounter = 16
   byteCode=[]
+
   inputArray.each {|line|
     if line.start_with?("@")
-      byteCode.push aInstruction(line, symbolTable)
+      code, variableCounter = aInstruction(line, symbolTable, variableCounter)
+      byteCode.push code
     elsif line.start_with?("(") != true
       byteCode.push cInstruction(line)
     end
